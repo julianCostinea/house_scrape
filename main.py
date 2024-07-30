@@ -1,3 +1,5 @@
+import smtplib
+
 import requests
 from selenium import webdriver
 from bs4 import BeautifulSoup
@@ -29,15 +31,42 @@ try:
     data = response.text
     soup = BeautifulSoup(data, "html.parser")
 
+    with open('houses.txt', encoding='utf-8') as file:
+        house_addresses = file.readlines()
+
+    new_house_addresses = []
+
+    # print (house_addresses[0])
+    # exit()
+
     all_house_posts = soup.select(".overflow-hidden.mx-4.shadow-sm")
-    #for each house post, find text inside selector font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2
-    #only take first element in house_post
-    all_house_posts = all_house_posts[:1]
+    # for each house post, find text inside selector font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2
+    # only take first element in house_post
+
+    # email setup
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    # Authentication
+    # message to be sent
+    message = "Message_you_need_to_send"
+    # sending the mail
+    s.sendmail("julian.costinea@gmail.com", "emil.costinea@gmail.com", message)
+    # terminating the session
+    s.quit()
+
+    exit()
+
+    all_house_posts = all_house_posts[:5]
     for house_post in all_house_posts:
-        house_details = house_post.find("div", class_="font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2").contents
+        house_details = house_post.find("div",
+                                        class_="font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2").contents
         house_street = house_details[0]
         house_city = house_details[1].text
         house_address = f"{house_street}, {house_city}"
+
+        if house_address in house_addresses:
+            continue
+
         browser.get("https://kamp.klimatilpasning.dk/vandloeb/vandloebsoversvoemmelse?value=1")
         browser.maximize_window()
         time.sleep(5)
@@ -58,15 +87,20 @@ try:
         zoom_out_button.click()
         zoom_out_button.click()
         zoom_out_button.click()
-        zoom_out_button.click()
+        # zoom_out_button.click()
         time.sleep(7)
         basement_icons = browser.find_elements(By.CSS_SELECTOR, ".legend.building")
         with_basement_icon = basement_icons[0]
         without_basement_icon = basement_icons[1]
-        #get sibling of without_basement_icon
+        # get sibling of without_basement_icon
         with_basement_text = with_basement_icon.find_element(By.XPATH, "following-sibling::*").text
         without_basement_text = without_basement_icon.find_element(By.XPATH, "following-sibling::*").text
-        if "0 bygninger" not in with_basement_text.lower() or "0 bygninger" not in without_basement_text.lower():
-            print(f"Risk of rain: {house_address}")
+        if "0 bygninger" in with_basement_text.lower() and "0 bygninger" in without_basement_text.lower() and house_address not in house_addresses:
+            new_house_addresses.append(house_address)
+
+    with open('houses.txt', 'w', encoding='utf-8') as file:
+        for house_address in new_house_addresses:
+            file.write(f"{house_address}\n")
+
 finally:
     browser.quit()
