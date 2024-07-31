@@ -1,8 +1,11 @@
 import smtplib
+from email.mime.text import MIMEText
 
 import requests
+import selenium
 from selenium import webdriver
 from bs4 import BeautifulSoup
+from selenium.common import NoSuchElementException
 from selenium.webdriver import Keys
 import time
 
@@ -47,19 +50,21 @@ try:
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.starttls()
     # Authentication
-    # message to be sent
-    message = "Message_you_need_to_send"
-    # sending the mail
-    s.sendmail("julian.costinea@gmail.com", "emil.costinea@gmail.com", message)
-    # terminating the session
-    s.quit()
-
-    exit()
+    # store this as os variable
+    # Create a MIME text object
+    msg = MIMEText("")
+    msg['From'] = "julian.costinea@gmail.com"
+    msg['To'] = "emil.costinea@gmail.com"
+    msg['Subject'] = 'New House found'
 
     all_house_posts = all_house_posts[:5]
     for house_post in all_house_posts:
         house_details = house_post.find("div",
                                         class_="font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2").contents
+        house_link = house_post.find("a",
+                                     class_="text-center relative bg-transition-to-l from-white to-red bg-white border border-red rounded text-gray-900 text-sm sm:text-base min-w-full block px-4 sm:px-10 py-2").get(
+            "href")
+
         house_street = house_details[0]
         house_city = house_details[1].text
         house_address = f"{house_street}, {house_city}"
@@ -96,11 +101,31 @@ try:
         with_basement_text = with_basement_icon.find_element(By.XPATH, "following-sibling::*").text
         without_basement_text = without_basement_icon.find_element(By.XPATH, "following-sibling::*").text
         if "0 bygninger" in with_basement_text.lower() and "0 bygninger" in without_basement_text.lower() and house_address not in house_addresses:
-            new_house_addresses.append(house_address)
+            browser.get("https://bbr.dk/se-bbr-oplysninger/")
+            time.sleep(5)
+            try:
+                decline_cookies_button = browser.find_element(By.CSS_SELECTOR, ".cpDontAcceptBtn")
+                decline_cookies_button.click()
+            except NoSuchElementException:
+                pass
+            time.sleep(2)
+            address_input = browser.find_element(By.ID, "searchcomponent_input")
+            address_input.send_keys(house_address)
+            time.sleep(2)
+            address_input.send_keys(Keys.ENTER)
+            time.sleep(5)
+            house_info = browser.find_element(By.CSS_SELECTOR, ".large-12.cell").text
+            #check if house_info contains "herunder asbest"
+            if "herunder asbest" not in house_info.lower():
+                new_house_addresses.append(house_address)
+                msg.set_payload(f"House found at {house_link}")
+
+        s.send_message(msg)
 
     with open('houses.txt', 'w', encoding='utf-8') as file:
         for house_address in new_house_addresses:
             file.write(f"{house_address}\n")
 
 finally:
+    s.quit()
     browser.quit()
