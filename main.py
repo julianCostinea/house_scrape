@@ -1,5 +1,6 @@
 import smtplib
 from email.mime.text import MIMEText
+import os
 
 import requests
 import selenium
@@ -16,6 +17,7 @@ chrome_options.add_argument("--no-sandbox")
 # chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-gpu")
 browser = webdriver.Chrome(options=chrome_options)
+gmail_password = os.environ.get("GMAIL_PASSWORD")
 
 try:
     # browser.get(
@@ -51,6 +53,9 @@ try:
     s.starttls()
     # Authentication
     # store this as os variable
+    print("password", gmail_password)
+    exit()
+    s.login("julian.costinea@gmail.com", gmail_password)
     # Create a MIME text object
     msg = MIMEText("")
     msg['From'] = "julian.costinea@gmail.com"
@@ -118,7 +123,7 @@ try:
             #check if house_info contains "herunder asbest"
             if "herunder asbest" not in house_info.lower():
                 new_house_addresses.append(house_address)
-                msg.set_payload(f"House found at {house_link}")
+                msg.set_payload(f"House found at\n https://www.boligsiden.dk/{house_link}")
 
         s.send_message(msg)
 
