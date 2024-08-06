@@ -1,18 +1,17 @@
 import smtplib
-from email.message import EmailMessage
+from email.mime.text import MIMEText
 import os
 
 import requests
+import selenium
 from selenium import webdriver
 from bs4 import BeautifulSoup
 from selenium.common import NoSuchElementException
 from selenium.webdriver import Keys
 import time
-from dotenv import load_dotenv
 
 from selenium.webdriver.common.by import By
 
-load_dotenv()
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--no-sandbox")
 # chrome_options.add_argument("--headless")
@@ -32,7 +31,7 @@ try:
 
     # TODO: also get second page
     response = requests.get(
-        "https://www.edc.dk/soeg/?ejd-typer=1&g-areal=900&energi=a1,a2,a2010,a2015,a2020,b,c&pageNr=1&pris=1200000-1500000&expenses=0-2000&postnr=5000,5200,5210,5220,5230,5240,5250,5260,5270,5290,5300,5330,5350,5370,5380,5390,5400,5450,5462,5463,5464,5466,5471,5474,5485,5491,5492,5500,5540,5550,5560,5580,5591,5592,5600,5610,5620,5631,5642,5672,5683,5690,5700,5750,5762,5771,5772,5792,5800,5853,5854,5856,5863,5871,5874,5881,5882,5883,5884,5892&sort=26",
+        "https://www.boligsiden.dk/tilsalg/villa?priceMax=1500000&priceMin=1200000&lotAreaMin=900&energyLabels=a,b,c&radius=35565|10.330817,55.357865&page=1",
         headers=header)
     data = response.text
     soup = BeautifulSoup(data, "html.parser")
@@ -42,10 +41,10 @@ try:
 
     new_house_addresses = []
 
-    all_house_posts = soup.find_all("article")
-    pretty = soup.prettify()
-    print(pretty)
-    exit()
+    # print (house_addresses[0])
+    # exit()
+
+    all_house_posts = soup.select(".overflow-hidden.mx-4.shadow-sm")
     # for each house post, find text inside selector font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2
     # only take first element in house_post
 
@@ -53,24 +52,28 @@ try:
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.starttls()
     # Authentication
+    # store this as os variable
+    print("password", gmail_password)
+    exit()
     s.login("julian.costinea@gmail.com", gmail_password)
     # Create a MIME text object
-    msg = EmailMessage()
+    msg = MIMEText("")
     msg['From'] = "julian.costinea@gmail.com"
     msg['To'] = "emil.costinea@gmail.com"
+    msg['Subject'] = 'New House found'
 
+    all_house_posts = all_house_posts[:5]
     for house_post in all_house_posts:
-        print('house', house_post)
-        house_details = house_post.find("address").contents
+        house_details = house_post.find("div",
+                                        class_="font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2").contents
         house_link = house_post.find("a",
-                                     class_=".-mt-1.block.px-4.pb-5").get(
+                                     class_="text-center relative bg-transition-to-l from-white to-red bg-white border border-red rounded text-gray-900 text-sm sm:text-base min-w-full block px-4 sm:px-10 py-2").get(
             "href")
 
-        house_street = house_details[0].text
+        house_street = house_details[0]
         house_city = house_details[1].text
         house_address = f"{house_street}, {house_city}"
-        print(house_address)
-        exit()
+
         if house_address in house_addresses:
             continue
 
@@ -94,11 +97,8 @@ try:
         zoom_out_button.click()
         zoom_out_button.click()
         zoom_out_button.click()
-        zoom_out_button.click()
-        time.sleep(5)
-        collapse_button = browser.find_elements(By.CLASS_NAME, "collapse")
-        collapse_button[1].click()
-        time.sleep(9)
+        # zoom_out_button.click()
+        time.sleep(7)
         basement_icons = browser.find_elements(By.CSS_SELECTOR, ".legend.building")
         with_basement_icon = basement_icons[0]
         without_basement_icon = basement_icons[1]
@@ -120,13 +120,12 @@ try:
             address_input.send_keys(Keys.ENTER)
             time.sleep(5)
             house_info = browser.find_element(By.CSS_SELECTOR, ".large-12.cell").text
-            # check if house_info contains "herunder asbest"
+            #check if house_info contains "herunder asbest"
             if "herunder asbest" not in house_info.lower():
                 new_house_addresses.append(house_address)
-                del msg['Subject']
-                msg['Subject'] = f'New House found at {house_address}'
-                msg.set_content(f"House found at\n https://www.edc.dk{house_link}")
-                s.send_message(msg)
+                msg.set_payload(f"House found at\n https://www.boligsiden.dk/{house_link}")
+
+        s.send_message(msg)
 
     with open('houses.txt', 'w', encoding='utf-8') as file:
         for house_address in new_house_addresses:
