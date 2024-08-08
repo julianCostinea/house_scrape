@@ -31,21 +31,22 @@ try:
     }
 
     # TODO: also get second page
-    response = requests.get(
-        "https://www.edc.dk/soeg/?ejd-typer=1&g-areal=900&energi=a1,a2,a2010,a2015,a2020,b,c&pageNr=1&pris=1200000-1500000&expenses=0-2000&postnr=5000,5200,5210,5220,5230,5240,5250,5260,5270,5290,5300,5330,5350,5370,5380,5390,5400,5450,5462,5463,5464,5466,5471,5474,5485,5491,5492,5500,5540,5550,5560,5580,5591,5592,5600,5610,5620,5631,5642,5672,5683,5690,5700,5750,5762,5771,5772,5792,5800,5853,5854,5856,5863,5871,5874,5881,5882,5883,5884,5892&sort=26",
-        headers=header)
-    data = response.text
-    soup = BeautifulSoup(data, "html.parser")
+    # response = requests.get(
+    #     "https://www.edc.dk/soeg/?ejd-typer=1&g-areal=900&energi=a1,a2,a2010,a2015,a2020,b,c&pageNr=1&pris=1200000-1500000&expenses=0-2000&postnr=5000,5200,5210,5220,5230,5240,5250,5260,5270,5290,5300,5330,5350,5370,5380,5390,5400,5450,5462,5463,5464,5466,5471,5474,5485,5491,5492,5500,5540,5550,5560,5580,5591,5592,5600,5610,5620,5631,5642,5672,5683,5690,5700,5750,5762,5771,5772,5792,5800,5853,5854,5856,5863,5871,5874,5881,5882,5883,5884,5892&sort=26",
+    #     headers=header)
+    # data = response.text
+    # soup = BeautifulSoup(data, "html.parser")
 
     with open('houses.txt', encoding='utf-8') as file:
         house_addresses = file.readlines()
 
     new_house_addresses = []
 
-    all_house_posts = soup.find_all("article")
-    pretty = soup.prettify()
-    print(pretty)
-    exit()
+    browser.get("https://www.edc.dk/soeg/?ejd-typer=1&g-areal=900&energi=a1,a2,a2010,a2015,a2020,b,c&pageNr=1&pris=1200000-1500000&expenses=0-2000&postnr=5000,5200,5210,5220,5230,5240,5250,5260,5270,5290,5300,5330,5350,5370,5380,5390,5400,5450,5462,5463,5464,5466,5471,5474,5485,5491,5492,5500,5540,5550,5560,5580,5591,5592,5600,5610,5620,5631,5642,5672,5683,5690,5700,5750,5762,5771,5772,5792,5800,5853,5854,5856,5863,5871,5874,5881,5882,5883,5884,5892&sort=26")
+    browser.maximize_window()
+    time.sleep(5)
+    all_house_posts = browser.find_elements(By.CSS_SELECTOR, "div[class='col-span-6 md:col-span-3']")
+
     # for each house post, find text inside selector font-black text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2
     # only take first element in house_post
 
@@ -60,17 +61,12 @@ try:
     msg['To'] = "emil.costinea@gmail.com"
 
     for house_post in all_house_posts:
-        print('house', house_post)
-        house_details = house_post.find("address").contents
-        house_link = house_post.find("a",
-                                     class_=".-mt-1.block.px-4.pb-5").get(
-            "href")
+        house_details = house_post.find_element(By.CSS_SELECTOR, "address[class='contents not-italic']")
+        house_link = house_post.find_element(By.TAG_NAME, "a").get_attribute("href")
 
-        house_street = house_details[0].text
-        house_city = house_details[1].text
+        house_street = house_details.find_element(By.CSS_SELECTOR, "h3[class='col-span-2 col-start-1 row-start-1 mb-2 block overflow-hidden text-ellipsis whitespace-normal font-bold text-primary line-clamp-1']").get_attribute("innerText")
+        house_city = house_details.find_element(By.CSS_SELECTOR, "span[class='col-span-1 col-start-1 row-start-2 block text-sm erhverv:text-business-pigeon-blue']").get_attribute("innerText")
         house_address = f"{house_street}, {house_city}"
-        print(house_address)
-        exit()
         if house_address in house_addresses:
             continue
 
@@ -90,10 +86,13 @@ try:
         time.sleep(5)
         zoom_out_button = browser.find_element(By.CLASS_NAME, "ol-zoom-out")
         zoom_out_button.click()
+        time.sleep(2)
         zoom_out_button.click()
+        time.sleep(2)
         zoom_out_button.click()
+        time.sleep(2)
         zoom_out_button.click()
-        zoom_out_button.click()
+        time.sleep(2)
         zoom_out_button.click()
         time.sleep(5)
         collapse_button = browser.find_elements(By.CLASS_NAME, "collapse")
